@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+
+current_dir="${BASH_SOURCE[0]%/*}"
+[ "$current_dir" = "${BASH_SOURCE[0]}" ] && current_dir="."
+source "$current_dir/../lib/utils.sh"
+
+display_status=$(get_tmux_option '@tmux2k-git-display-status' 'false')
+added_icon=$(get_tmux_option '@tmux2k-git-added-icon' '')
+modified_icon=$(get_tmux_option '@tmux2k-git-modified-icon' '')
+updated_icon=$(get_tmux_option '@tmux2k-git-updated-icon' '')
+deleted_icon=$(get_tmux_option '@tmux2k-git-deleted-icon' '')
+repo_icon=$(get_tmux_option '@tmux2k-git-repo-icon' '')
+diff_icon=$(get_tmux_option '@tmux2k-git-diff-icon' '')
+no_repo_icon=$(get_tmux_option '@tmux2k-git-no-repo-icon' '')
+
+get_changes() {
+    declare -i added=0
+    declare -i modified=0
+    declare -i updated=0
+    declare -i deleted=0
+
+    for i in $(git -C "$path" --no-optional-locks status -s 2>/dev/null); do
+        case $i in
+        'A') added+=1 ;;
+        'M') modified+=1 ;;
+        'U') updated+=1 ;;
+        'D') deleted+=1 ;;
+        esac
+    done
+
+    output=""
+    [ $added -gt 0 ] && output+="${added} $added_icon"
+    [ $modified -gt 0 ] && output+=" ${modified} $modified_icon"
+    [ $updated -gt 0 ] && output+=" ${updated} $updated_icon"
+    [ $deleted -gt 0 ] && output+=" ${deleted} $deleted_icon"
+
+    echo "$output"
+}
+
+check_empty_symbol() {
+    symbol=$1
+    if [ "$symbol" == "" ]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
+check_for_changes() {
+    if [ "$(check_for_git_dir)" == "true" ]; then
+        if [ "$(git -C "$path" --no-optional-locks status -s 2>/dev/null)" != "" ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+    else
+        echo "false"
+    fi
+}
+
+check_for_git_dir() {
+    if git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
+get_branch() {
+    if [ "$(check_for_git_dir)" == "true" ]; then
+        local branch
+        branch=$(git -C "$path" --no-optional-locks rev-parse --abbrev-ref HEAD 2>/dev/null)
+        printf "%.20s " "${branch:-HEAD}"
+    else
+        echo "$no_repo_icon"
+    fi
+}
+
+get_message() {
+    if [ "$(check_for_git_dir)" == "true" ]; then
+        branch="$(get_branch)"
+
+        if [ "$(check_for_changes)" == "true" ]; then
+
+            changes="$(get_changes)"
+
+            if [ "${display_status}" == "false" ]; then
+                if [ "$(check_empty_symbol "$diff_icon")" == "true" ]; then
+                    echo "${changes} $branch"
+                else
+                    echo "$diff_icon ${changes} $branch"
+                fi
+            else
+                if [ "$(check_empty_symbol "$diff_icon")" == "true" ]; then
+                    echo "$branch"
+                else
+                    echo "$diff_icon $branch"
+                fi
+            fi
+
+        else
+            if [ "$(check_empty_symbol "$repo_icon")" == "true" ]; then
+                echo "$branch"
+            else
+                echo "$repo_icon $branch"
+            fi
+        fi
+    else
+        echo "$no_repo_icon"
+    fi
+}
+
+git_dynamic_colors=$(get_tmux_option '@tmux2k-git-dynamic-colors' '')
+
+[ -n "$git_dynamic_colors" ] &&
+    source "$current_dir/../lib/color-utils.sh"
+
+main() {
+    path=$(get_pane_dir "$1")
+    local msg
+    msg=$(get_message)
+
+    local color_prefix=""
+    if [ -n "$git_dynamic_colors" ] && [ "$msg" != "$no_repo_icon" ]; then
+        local branch match_target
+        branch="$(get_branch)"
+        match_target="$branch"
+        [ "$(check_for_changes)" == "true" ] && match_target="${branch}:dirty"
+
+        local color=""
+        match_dynamic_color "$match_target" "$git_dynamic_colors" color
+        [ -z "$color" ] && match_dynamic_color "$branch" "$git_dynamic_colors" color
+        [ -n "$color" ] && color_prefix="#[fg=${color}]"
+    fi
+
+    echo "${color_prefix}${msg}"
+}
+
+main "$@"

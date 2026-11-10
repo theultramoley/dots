@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+current_dir="${BASH_SOURCE[0]%/*}"
+[ "$current_dir" = "${BASH_SOURCE[0]}" ] && current_dir="."
+source "$current_dir/../lib/utils.sh"
+
+truncate_path() {
+    local path="$1"
+    local max_length=$(get_tmux_option "@tmux2k-cwd-length" 30)
+    local min_depth=$(get_tmux_option "@tmux2k-cwd-min-depth" 3)
+    local prefix_chars=$(get_tmux_option "@tmux2k-cwd-prefix-chars" 2)
+
+    [[ ${#path} -le $max_length ]] && echo "$path" && return
+
+    IFS='/' read -ra parts <<<"$path"
+    local truncated=""
+
+    for ((i = 0; i < ${#parts[@]} - 1; i++)); do
+        truncated+="${parts[i]:0:$prefix_chars}/"
+    done
+    truncated+="${parts[-1]}"
+
+    [[ ${#truncated} -le $max_length ]] && echo "$truncated" && return
+
+    local slash_count=$(tr -cd '/' <<<"$truncated" | wc -c)
+    if [[ $slash_count -gt $min_depth ]]; then
+        IFS='/' read -ra parts <<<"$truncated"
+        echo "${parts[0]}/${parts[1]}/.../${parts[-2]}/${parts[-1]}"
+    else
+        echo "$truncated"
+    fi
+}
+
+cwd_icon=$(get_tmux_option "@tmux2k-cwd-icon" "")
+cwd_dynamic_colors=$(get_tmux_option "@tmux2k-cwd-dynamic-colors" "")
+
+[ -n "$cwd_dynamic_colors" ] &&
+    source "$current_dir/../lib/color-utils.sh"
+
+main() {
+    path=$(get_pane_dir "$1")
+    cwd="${path/"$HOME"/'~'}"
+    truncated_cwd=$(truncate_path "$cwd")
+
+    local color_prefix=""
+    if [ -n "$cwd_dynamic_colors" ]; then
+        local color=""
+        match_dynamic_color "$cwd" "$cwd_dynamic_colors" color
+        [ -n "$color" ] && color_prefix="#[fg=${color}]"
+    fi
+
+    echo "${color_prefix}${cwd_icon} ${truncated_cwd}"
+}
+
+main "$@"
