@@ -19,7 +19,7 @@ alias ls="eza -l"
 
 ### PATH VARIABLES ###
 fish_add_path ~/go/bin
-fish_add_path ~/appimage
+fish_add_path ~/.emacs.d/bin
 
 # launch starship
 starship init fish | source

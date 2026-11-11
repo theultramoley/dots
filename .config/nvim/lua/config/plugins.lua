@@ -12,7 +12,7 @@ vim.api.nvim_create_autocmd("PackChanged", {
 })
 
 vim.pack.add({
-  "https://github.com/rebelot/kanagawa.nvim", -- colourscheme
+  "https://github.com/EdenEast/nightfox.nvim",
   "https://github.com/nvim-mini/mini.nvim", -- mini.nvim
   "https://github.com/nvim-treesitter/nvim-treesitter", -- treesitter
   "https://github.com/neovim/nvim-lspconfig", -- nvim lspconfig

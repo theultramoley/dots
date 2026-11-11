@@ -19,12 +19,14 @@ exec autotiling & mako & pipewire
 input type:keyboard {
     xkb_layout "gb"
     xkb_options "caps:escape"
+    repeat_delay 300
+    repeat_rate 30
 }
 
 ### APPEARANCE ###
 gaps inner 0
 gaps outer 0
-default_border none ###pixel 3
+default_border none
 client.focused #7e9cd8 #7e9cd8 #7e9cd8 #7e9cd8 #7e9cd8
 
 seat * xcursor_theme Sweet-cursors 24

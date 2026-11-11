@@ -12,4 +12,4 @@ vim.lsp.enable({ "lua_ls", "gopls", "clangd", "ols" })
 vim.lsp.log.set_level("ERROR")
 
 -- colourshceme
-vim.cmd.colorscheme("kanagawa-wave")
+vim.cmd.colorscheme("duskfox")
